@@ -1,0 +1,55 @@
+C:.
+    .eslintrc.js
+    .gitignore
+    .prettierrc.js
+    app.json
+    App.jsx
+    babel.config.js
+    index.js
+    jest.config.js
+    metro.config.js
+    package-lock.json
+    package.json
+    README.md
+    tree.txt
+    tsconfig.json
+    
++---android
++---ios
++---nodemodules
++---src
+    +---components
+            Button.jsx
+            Input.jsx
+            InterestChip.jsx
+            LoadingSpinner.jsx
+        
+            
+    +---context
+            AuthContext.jsx
+            
+    +---navigation
+            AppNavigator.jsx
+            
+    +---screens
+            HomeScreen.jsx
+            LoginScreen.jsx
+            OnboardingScreen.jsx
+            PlanScreen.jsx
+            ProfileScreen.jsx
+            RecommendationScreen.jsx
+            RegisterScreen.jsx
+            RoutesScreen.jsx
+            SplashScreen.jsx
+            
+    +---services
+            api.js
+            auth.js
+            storage.js
+            
+    +---utils
+            colors.js
+            constants.js
+            
++---__tests__
+        App.test.tsx
