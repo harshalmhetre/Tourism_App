@@ -1,45 +1,48 @@
+/**
+ * src/services/storage.js
+ * Token and user persistence via AsyncStorage.
+ *
+ * Exports a `storage` object so AuthContext can call:
+ *   storage.getToken()
+ *   storage.saveToken(token)
+ *   storage.getUser()
+ *   storage.saveUser(user)
+ *   storage.clearAll()
+ */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS } from '../utils/constants';
 
-export const saveToken = async (token) => {
-  try {
-    await AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
-  } catch (error) {
-    console.error('Error saving token:', error);
-  }
-};
+const TOKEN_KEY = 'token';
+const USER_KEY  = 'user';
 
-export const getToken = async () => {
-  try {
-    return await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-  } catch (error) {
-    console.error('Error getting token:', error);
-    return null;
-  }
-};
+export const storage = {
+  saveToken: async (token) => {
+    try { await AsyncStorage.setItem(TOKEN_KEY, token); } catch (e) { console.error('saveToken:', e); }
+  },
 
-export const saveUserData = async (userData) => {
-  try {
-    await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
-  } catch (error) {
-    console.error('Error saving user data:', error);
-  }
-};
+  getToken: async () => {
+    try { return await AsyncStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
+  },
 
-export const getUserData = async () => {
-  try {
-    const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.error('Error getting user data:', error);
-    return null;
-  }
-};
+  removeToken: async () => {
+    try { await AsyncStorage.removeItem(TOKEN_KEY); } catch (e) { console.error('removeToken:', e); }
+  },
 
-export const clearStorage = async () => {
-  try {
-    await AsyncStorage.multiRemove([STORAGE_KEYS.AUTH_TOKEN, STORAGE_KEYS.USER_DATA]);
-  } catch (error) {
-    console.error('Error clearing storage:', error);
-  }
+  saveUser: async (user) => {
+    try { await AsyncStorage.setItem(USER_KEY, JSON.stringify(user)); } catch (e) { console.error('saveUser:', e); }
+  },
+
+  getUser: async () => {
+    try {
+      const data = await AsyncStorage.getItem(USER_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch (e) { return null; }
+  },
+
+  removeUser: async () => {
+    try { await AsyncStorage.removeItem(USER_KEY); } catch (e) { console.error('removeUser:', e); }
+  },
+
+  clearAll: async () => {
+    try { await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]); } catch (e) { console.error('clearAll:', e); }
+  },
 };

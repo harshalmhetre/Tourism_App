@@ -1,147 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, Alert, Platform, StatusBar, Linking,
+  ActivityIndicator, Alert, Platform, StatusBar,
+  Linking, Modal, ScrollView, Image,
 } from 'react-native';
 import { COLORS } from '../utils/colors';
 import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MOCK DATA — for UI preview only.
-// When backend is ready:
-//   1. Delete the MOCK_RECOMMENDATIONS constant below
-//   2. Delete the mock useEffect block (marked clearly)
-//   3. Uncomment the REAL API fetchRecs block
-//   4. Uncomment the REAL logInteraction block
-// ─────────────────────────────────────────────────────────────────────────────
-
-const MOCK_RECOMMENDATIONS = [
-  {
-    place: {
-      place_id: 1,
-      name: 'Gateway of India',
-      category: 'historical',
-      city: 'Mumbai',
-      latitude: 18.9220,
-      longitude: 72.8347,
-      description: 'An iconic arch monument built in 1924 to commemorate the visit of King George V and Queen Mary. It stands on the waterfront of Apollo Bunder overlooking the Arabian Sea.',
-      tags: ['landmark', 'heritage', 'monument', 'waterfront'],
-      avg_rating: 4.7,
-      popularity_score: 95,
-    },
-    explanation: 'Top pick based on your interest in historical places',
-  },
-  {
-    place: {
-      place_id: 2,
-      name: 'Marine Drive',
-      category: 'nature',
-      city: 'Mumbai',
-      latitude: 18.9440,
-      longitude: 72.8232,
-      description: "A 3.6 km long boulevard hugging Mumbai's coastline. Also known as the Queen's Necklace due to its glittering shape when viewed from above at night.",
-      tags: ['sunset', 'sea', 'promenade', 'romantic'],
-      avg_rating: 4.6,
-      popularity_score: 92,
-    },
-    explanation: 'Highly rated by travellers similar to you',
-  },
-  {
-    place: {
-      place_id: 3,
-      name: 'Chhatrapati Shivaji Museum',
-      category: 'museum',
-      city: 'Mumbai',
-      latitude: 18.9267,
-      longitude: 72.8322,
-      description: "One of India's finest museums housing over 50,000 artefacts across three floors. The building itself is a stunning example of Indo-Saracenic architecture.",
-      tags: ['art', 'history', 'architecture', 'culture'],
-      avg_rating: 4.5,
-      popularity_score: 82,
-    },
-    explanation: 'Matches your interest in museums and culture',
-  },
-  {
-    place: {
-      place_id: 4,
-      name: 'Siddhivinayak Temple',
-      category: 'religious',
-      city: 'Mumbai',
-      latitude: 19.0167,
-      longitude: 72.8301,
-      description: 'One of the most visited Hindu temples in Mumbai, dedicated to Lord Ganesha. Known for its six-feet tall idol and serene spiritual atmosphere.',
-      tags: ['temple', 'spiritual', 'prayer', 'peaceful'],
-      avg_rating: 4.8,
-      popularity_score: 90,
-    },
-    explanation: 'Popular among family travellers like you',
-  },
-  {
-    place: {
-      place_id: 5,
-      name: 'Juhu Beach',
-      category: 'beach',
-      city: 'Mumbai',
-      latitude: 19.0883,
-      longitude: 72.8262,
-      description: "Mumbai's most popular beach, famous for its street food stalls serving pani puri, bhel puri and fresh coconut water. A great spot to experience local Mumbai culture.",
-      tags: ['beach', 'street food', 'sunset', 'family'],
-      avg_rating: 4.1,
-      popularity_score: 85,
-    },
-    explanation: 'Great match for your beach and food interests',
-  },
-  {
-    place: {
-      place_id: 6,
-      name: 'Bandra-Worli Sea Link',
-      category: 'entertainment',
-      city: 'Mumbai',
-      latitude: 19.0420,
-      longitude: 72.8181,
-      description: 'An eight-lane cable-stayed bridge spanning 5.6 km across Mahim Bay. A feat of modern engineering and a spectacular viewpoint, especially at night.',
-      tags: ['bridge', 'engineering', 'night view', 'iconic'],
-      avg_rating: 4.5,
-      popularity_score: 88,
-    },
-    explanation: 'Trending among visitors to Mumbai',
-  },
-  {
-    place: {
-      place_id: 7,
-      name: 'Elephanta Caves',
-      category: 'historical',
-      city: 'Mumbai',
-      latitude: 18.9633,
-      longitude: 72.9315,
-      description: 'A UNESCO World Heritage Site comprising sculpted caves on Elephanta Island in Mumbai Harbour. The caves date back to between the 5th and 8th centuries CE.',
-      tags: ['UNESCO', 'caves', 'sculpture', 'island'],
-      avg_rating: 4.3,
-      popularity_score: 78,
-    },
-    explanation: 'Must-see historical site near Mumbai',
-  },
-  {
-    place: {
-      place_id: 8,
-      name: 'Dharavi Street Food Tour',
-      category: 'food',
-      city: 'Mumbai',
-      latitude: 19.0413,
-      longitude: 72.8549,
-      description: 'Experience authentic Mumbai street food in one of Asia\'s most vibrant neighbourhoods. Sample local delicacies from small eateries serving traditional recipes for decades.',
-      tags: ['street food', 'local', 'authentic', 'cultural'],
-      avg_rating: 4.4,
-      popularity_score: 74,
-    },
-    explanation: 'Recommended for food lovers',
-  },
-];
-
 // ─── Category meta ────────────────────────────────────────────────────────────
-
 const CAT_META = {
   historical:    { bg: '#FFF3E0', text: '#E65100', emoji: '🏛️' },
   nature:        { bg: '#E8F5E9', text: '#2E7D32', emoji: '🌿' },
@@ -159,7 +27,6 @@ const CAT_META = {
 const getCat = (cat) => CAT_META[cat] || { bg: '#F5F5F5', text: '#444', emoji: '📍' };
 
 // ─── Star Rating ──────────────────────────────────────────────────────────────
-
 const Stars = ({ rating = 0 }) => {
   const full  = Math.floor(rating);
   const empty = 5 - full;
@@ -178,8 +45,7 @@ const starSt = StyleSheet.create({
   num:   { fontSize: 12, color: COLORS.gray, fontWeight: '600', marginLeft: 5 },
 });
 
-// ─── Skeleton loading card ────────────────────────────────────────────────────
-
+// ─── Skeleton Card ────────────────────────────────────────────────────────────
 const SkeletonCard = () => (
   <View style={cSt.card}>
     <View style={{ height: 56, backgroundColor: '#F0F0F0' }} />
@@ -191,16 +57,154 @@ const SkeletonCard = () => (
   </View>
 );
 
-// ─── Place Card ───────────────────────────────────────────────────────────────
+// ─── YouTube Preview Modal ────────────────────────────────────────────────────
+// ✅ Calls GET /places/{place_id}/videos to fetch YouTube videos for a place
+const YouTubeModal = ({ visible, place, onClose }) => {
+  const [videos,       setVideos]       = useState([]);
+  const [loadingVids,  setLoadingVids]  = useState(false);
 
-const PlaceCard = ({ item, index, isSelected, onToggle, onInteraction }) => {
+  useEffect(() => {
+    if (!visible || !place) return;
+    setVideos([]);
+    setLoadingVids(true);
+
+    // ✅ GET /places/{place_id}/videos?max_results=5
+    api.get(`/places/${place.place_id}/videos?max_results=5`)
+      .then(data => setVideos(data.videos || []))
+      .catch(() => setVideos([]))
+      .finally(() => setLoadingVids(false));
+  }, [visible, place]);
+
+  const openVideo = (videoId) => {
+    Linking.openURL(`https://www.youtube.com/watch?v=${videoId}`);
+  };
+
+  // Fallback: open YouTube search if no videos returned
+  const openYouTubeSearch = () => {
+    if (!place) return;
+    const q = encodeURIComponent(`${place.name} ${place.city} travel`);
+    Linking.openURL(`https://www.youtube.com/results?search_query=${q}`);
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
+      <View style={ytSt.overlay}>
+        <View style={ytSt.sheet}>
+          {/* Header */}
+          <View style={ytSt.header}>
+            <View style={{ flex: 1 }}>
+              <Text style={ytSt.title} numberOfLines={1}>
+                ▶  {place?.name}
+              </Text>
+              <Text style={ytSt.sub}>YouTube Previews</Text>
+            </View>
+            <TouchableOpacity style={ytSt.closeBtn} onPress={onClose}>
+              <Text style={ytSt.closeTxt}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          {loadingVids ? (
+            <View style={ytSt.center}>
+              <ActivityIndicator color={COLORS.primary} size="large" />
+              <Text style={ytSt.loadTxt}>Fetching videos…</Text>
+            </View>
+          ) : videos.length === 0 ? (
+            // No videos from API — show search fallback
+            <View style={ytSt.center}>
+              <Text style={ytSt.noVidIcon}>🎬</Text>
+              <Text style={ytSt.noVidTxt}>No preview videos found</Text>
+              <TouchableOpacity style={ytSt.searchBtn} onPress={openYouTubeSearch}>
+                <Text style={ytSt.searchBtnTxt}>Search on YouTube →</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={{ padding: 16 }} showsVerticalScrollIndicator={false}>
+              {videos.map((vid) => (
+                <TouchableOpacity
+                  key={vid.video_id}
+                  style={ytSt.videoCard}
+                  onPress={() => openVideo(vid.video_id)}
+                  activeOpacity={0.8}
+                >
+                  {/* Thumbnail */}
+                  <View style={ytSt.thumbWrap}>
+                    <Image
+                      source={{ uri: vid.thumbnail_url }}
+                      style={ytSt.thumb}
+                      resizeMode="cover"
+                    />
+                    <View style={ytSt.playOverlay}>
+                      <Text style={ytSt.playIcon}>▶</Text>
+                    </View>
+                  </View>
+                  {/* Info */}
+                  <View style={ytSt.videoInfo}>
+                    <Text style={ytSt.videoTitle} numberOfLines={2}>{vid.title}</Text>
+                    <Text style={ytSt.videoChannel}>{vid.channel_title}</Text>
+                    <View style={ytSt.videoMeta}>
+                      {vid.duration && (
+                        <View style={ytSt.metaChip}>
+                          <Text style={ytSt.metaTxt}>⏱ {vid.duration}</Text>
+                        </View>
+                      )}
+                      {vid.view_count && (
+                        <View style={ytSt.metaChip}>
+                          <Text style={ytSt.metaTxt}>👁 {(vid.view_count / 1000).toFixed(0)}K</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const ytSt = StyleSheet.create({
+  overlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sheet:       { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', minHeight: 300 },
+  header:      { flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  title:       { fontSize: 16, fontWeight: '800', color: COLORS.dark },
+  sub:         { fontSize: 12, color: COLORS.gray, marginTop: 2 },
+  closeBtn:    { width: 34, height: 34, borderRadius: 17, backgroundColor: '#F6F7FB', alignItems: 'center', justifyContent: 'center' },
+  closeTxt:    { fontSize: 14, color: COLORS.dark, fontWeight: '700' },
+  center:      { alignItems: 'center', padding: 40, gap: 12 },
+  loadTxt:     { fontSize: 13, color: COLORS.gray, marginTop: 8 },
+  noVidIcon:   { fontSize: 48 },
+  noVidTxt:    { fontSize: 15, fontWeight: '600', color: COLORS.dark },
+  searchBtn:   { backgroundColor: '#FF0000', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, marginTop: 8 },
+  searchBtnTxt:{ color: '#fff', fontWeight: '700', fontSize: 14 },
+  videoCard:   { flexDirection: 'row', gap: 12, marginBottom: 16, backgroundColor: '#F6F7FB', borderRadius: 14, overflow: 'hidden', padding: 10 },
+  thumbWrap:   { width: 120, height: 72, borderRadius: 10, overflow: 'hidden', position: 'relative', backgroundColor: '#E0E0E0' },
+  thumb:       { width: '100%', height: '100%' },
+  playOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center' },
+  playIcon:    { color: '#fff', fontSize: 22 },
+  videoInfo:   { flex: 1, justifyContent: 'space-between' },
+  videoTitle:  { fontSize: 13, fontWeight: '700', color: COLORS.dark, lineHeight: 18 },
+  videoChannel:{ fontSize: 11, color: COLORS.gray, marginTop: 2 },
+  videoMeta:   { flexDirection: 'row', gap: 6, marginTop: 6 },
+  metaChip:    { backgroundColor: '#fff', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: '#E8E8F0' },
+  metaTxt:     { fontSize: 11, color: COLORS.dark, fontWeight: '500' },
+});
+
+// ─── Place Card ───────────────────────────────────────────────────────────────
+const PlaceCard = ({ item, index, isSelected, onToggle, onInteraction, onPreview }) => {
   const { place } = item;
   const cat = getCat(place.category);
 
-  const openYouTube = () => {
+  // ✅ Preview button calls the YouTube modal (which hits /places/{id}/videos)
+  const handlePreview = () => {
     onInteraction(place.place_id, 'preview_viewed');
-    const q = encodeURIComponent(`${place.name} ${place.city} travel`);
-    Linking.openURL(`https://www.youtube.com/results?search_query=${q}`);
+    onPreview(place);
   };
 
   const openMap = () => {
@@ -218,16 +222,13 @@ const PlaceCard = ({ item, index, isSelected, onToggle, onInteraction }) => {
 
   return (
     <View style={[cSt.card, isSelected && cSt.cardSelected]}>
-
       {/* Colour band */}
       <View style={[cSt.band, { backgroundColor: cat.bg }]}>
         <View style={cSt.bandLeft}>
           <Text style={cSt.bandEmoji}>{cat.emoji}</Text>
           <View>
             <Text style={[cSt.catText, { color: cat.text }]}>
-              {place.category
-                ? place.category.charAt(0).toUpperCase() + place.category.slice(1)
-                : 'Place'}
+              {place.category ? place.category.charAt(0).toUpperCase() + place.category.slice(1) : 'Place'}
             </Text>
             <Text style={cSt.cityText}>{place.city}</Text>
           </View>
@@ -248,11 +249,14 @@ const PlaceCard = ({ item, index, isSelected, onToggle, onInteraction }) => {
         )}
         {place.tags?.length > 0 && (
           <View style={cSt.tags}>
-            {place.tags.slice(0, 4).map((tag, i) => (
-              <View key={i} style={cSt.tag}>
-                <Text style={cSt.tagTxt}>{tag}</Text>
-              </View>
-            ))}
+            {/* ✅ tags is comma-separated string from backend — split it */}
+            {(typeof place.tags === 'string' ? place.tags.split(',') : place.tags)
+              .slice(0, 4)
+              .map((tag, i) => (
+                <View key={i} style={cSt.tag}>
+                  <Text style={cSt.tagTxt}>{tag.trim()}</Text>
+                </View>
+              ))}
           </View>
         )}
         <View style={cSt.popRow}>
@@ -266,7 +270,8 @@ const PlaceCard = ({ item, index, isSelected, onToggle, onInteraction }) => {
 
       {/* Actions */}
       <View style={cSt.actions}>
-        <TouchableOpacity style={cSt.iconBtn} onPress={openYouTube} activeOpacity={0.75}>
+        {/* ✅ Preview → opens YouTube modal via /places/{id}/videos */}
+        <TouchableOpacity style={cSt.iconBtn} onPress={handlePreview} activeOpacity={0.75}>
           <Text style={cSt.iconBtnIcon}>▶</Text>
           <Text style={cSt.iconBtnTxt}>Preview</Text>
         </TouchableOpacity>
@@ -322,64 +327,75 @@ const cSt = StyleSheet.create({
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-
 const RecommendationScreen = ({ route, navigation }) => {
   const { payload, cityName } = route.params || {};
   const { user } = useAuth();
 
-  const [recs, setRecs]         = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [selected, setSelected] = useState([]);
-  const [cacheHit, setCacheHit] = useState(false);
+  const [recs,         setRecs]         = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [refreshing,   setRefreshing]   = useState(false);
+  const [error,        setError]        = useState(null);
+  const [selected,     setSelected]     = useState([]);
+  const [cacheHit,     setCacheHit]     = useState(false);
 
-  // ── MOCK: load dummy data with realistic fake delay ────────────────────────
-  // DELETE this block when switching to real API
-  // useEffect(() => {
-  //   const t = setTimeout(() => {
-  //     setRecs(MOCK_RECOMMENDATIONS);
-  //     setCacheHit(false);
-  //     setLoading(false);
-  //   }, 1200);
-  //   return () => clearTimeout(t);
-  // }, []);
-  // ── END MOCK BLOCK ────────────────────────────────────────────────────────
+  // YouTube modal state
+  const [ytVisible,    setYtVisible]    = useState(false);
+  const [ytPlace,      setYtPlace]      = useState(null);
 
-  // ── REAL API — uncomment when backend is ready ────────────────────────────
-  const fetchRecs = useCallback(async () => {
-    setLoading(true);
+  // ── Fetch Recommendations ─────────────────────────────────────────────────
+  // ✅ POST /recommendations with { user_id, latitude, longitude, max_distance_km, limit, category_filter }
+  const fetchRecs = useCallback(async (isRefresh = false) => {
     try {
-      // axios interceptor auto-attaches token + returns response.data directly
+      isRefresh ? setRefreshing(true) : setLoading(true);
+      setError(null);
+
+      if (isRefresh) {
+        // ✅ POST /recommendations/refresh clears server-side cache
+        await api.post('/recommendations/refresh').catch(() => {});
+      }
+
       const data = await api.post('/recommendations', payload);
       setRecs(data.recommendations || []);
       setCacheHit(data.cache_hit || false);
+
     } catch (err) {
-      Alert.alert('Could not load recommendations', err.message);
+      setError(err.message || 'Failed to load recommendations');
+      Alert.alert(
+        'Could not load recommendations',
+        err.message || 'Please check your connection and try again.',
+        [
+          { text: 'Go Back', onPress: () => navigation.goBack() },
+          { text: 'Retry',   onPress: () => fetchRecs() },
+        ]
+      );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [payload]);
+
   useEffect(() => { fetchRecs(); }, [fetchRecs]);
-  // ── END REAL API BLOCK ────────────────────────────────────────────────────
 
-  // ── MOCK interaction log — just console.log for now ───────────────────────
-  // REPLACE with real block below when backend is ready
-  // const logInteraction = useCallback((placeId, type) => {
-  //   console.log(`[MOCK interaction] place_id:${placeId}  type:${type}`);
-  // }, []);
-
-  // ── REAL interaction log — uncomment when backend is ready ───────────────
-  const logInteraction = useCallback(async (placeId, type) => {
+  // ── Log Interaction ───────────────────────────────────────────────────────
+  // ✅ POST /interactions — silent, never blocks UI
+  const logInteraction = useCallback(async (placeId, interactionType) => {
     try {
-      // axios interceptor auto-attaches token + handles errors
-      await api.post(`/interactions?user_id=${user?.id}`, {
-        place_id: placeId, interaction_type: type, session_id: null,
+      await api.post('/interactions', {
+        place_id:         placeId,
+        interaction_type: interactionType,
+        session_id:       null,
       });
-    } catch (_) { /* silent fail — never block the UI for analytics */ }
-  }, [user]);
-  // ── END REAL LOG BLOCK ────────────────────────────────────────────────────
+    } catch (_) { /* intentionally silent */ }
+  }, []);
+
+  // ── YouTube Preview ───────────────────────────────────────────────────────
+  // ✅ Opens modal which calls GET /places/{place_id}/videos
+  const handlePreview = useCallback((place) => {
+    setYtPlace(place);
+    setYtVisible(true);
+  }, []);
 
   // ── Toggle place selection ────────────────────────────────────────────────
-
   const togglePlace = useCallback((place) => {
     setSelected(prev => {
       const exists = prev.find(p => p.place_id === place.place_id);
@@ -393,7 +409,7 @@ const RecommendationScreen = ({ route, navigation }) => {
   }, []);
 
   // ── Navigate to Routes ────────────────────────────────────────────────────
-
+  // ✅ Passes selectedPlaces to RoutesScreen which builds /routes payload
   const handlePlanRoute = () => {
     if (selected.length < 2) {
       Alert.alert('Add More Places', 'Select at least 2 places to plan a route.');
@@ -402,21 +418,14 @@ const RecommendationScreen = ({ route, navigation }) => {
     selected.forEach(p => logInteraction(p.place_id, 'route_requested'));
     navigation.navigate('Routes', {
       selectedPlaces: selected,
-      userId: user?.id,
-      cityName: cityName || 'Mumbai',
+      userId:   user?.user_id,
+      cityName: cityName || '',
     });
   };
 
-  // ── Mock refresh handler ──────────────────────────────────────────────────
+  const handleRefresh = () => fetchRecs(true);
 
-  const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => { setRecs(MOCK_RECOMMENDATIONS); setLoading(false); }, 800);
-    // When real API: replace above with fetchRecs()
-  };
-
-  // ── List header ───────────────────────────────────────────────────────────
-
+  // ── List Header ───────────────────────────────────────────────────────────
   const Header = () => (
     <View style={s.listTop}>
       <TouchableOpacity style={s.backBtn} onPress={() => navigation.navigate('Plan')} activeOpacity={0.7}>
@@ -426,35 +435,42 @@ const RecommendationScreen = ({ route, navigation }) => {
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Recommendations</Text>
           <Text style={s.subtitle}>
-            📍 {cityName || 'Mumbai'}  ·  {recs.length} places found
+            📍 {cityName || 'Nearby'}  ·  {recs.length} places found
             {cacheHit ? '  ⚡ cached' : ''}
           </Text>
         </View>
-        <TouchableOpacity style={s.refreshBtn} onPress={handleRefresh} activeOpacity={0.75}>
-          <Text style={s.refreshTxt}>↺</Text>
+        <TouchableOpacity style={s.refreshBtn} onPress={handleRefresh} activeOpacity={0.75} disabled={refreshing}>
+          {refreshing
+            ? <ActivityIndicator size="small" color={COLORS.primary} />
+            : <Text style={s.refreshTxt}>↺</Text>
+          }
         </TouchableOpacity>
       </View>
       <View style={s.infoStrip}>
         <Text style={s.infoTxt}>
-          Tap <Text style={{ color: COLORS.primary, fontWeight: '700' }}>+ Add to Trip</Text> on places you want to visit, then plan your route.
+          Tap <Text style={{ color: COLORS.primary, fontWeight: '700' }}>▶ Preview</Text> to watch YouTube videos, then{' '}
+          <Text style={{ color: COLORS.primary, fontWeight: '700' }}>+ Add to Trip</Text> to select places.
         </Text>
       </View>
     </View>
   );
 
   // ── Empty state ───────────────────────────────────────────────────────────
-
   const Empty = () => (
     <View style={s.emptyBox}>
-      <Text style={s.emptyIcon}>🔍</Text>
-      <Text style={s.emptyTitle}>No places found</Text>
-      <Text style={s.emptySub}>Try widening the distance or changing your interests.</Text>
-      <Button title="Go Back & Adjust" onPress={() => navigation.goBack()} variant="outline" style={{ marginTop: 20, width: 200 }} />
+      <Text style={s.emptyIcon}>{error ? '⚠️' : '🔍'}</Text>
+      <Text style={s.emptyTitle}>{error ? 'Something went wrong' : 'No places found'}</Text>
+      <Text style={s.emptySub}>{error || 'Try widening the distance or changing your interests.'}</Text>
+      <Button
+        title={error ? 'Retry' : 'Go Back & Adjust'}
+        onPress={error ? () => fetchRecs() : () => navigation.goBack()}
+        variant="outline"
+        style={{ marginTop: 20, width: 200 }}
+      />
     </View>
   );
 
   // ── Bottom sticky bar ─────────────────────────────────────────────────────
-
   const BottomBar = () =>
     selected.length === 0 ? null : (
       <View style={s.bottomBar}>
@@ -474,19 +490,18 @@ const RecommendationScreen = ({ route, navigation }) => {
     );
 
   // ── Loading skeleton ──────────────────────────────────────────────────────
-
   if (loading) {
     return (
       <View style={s.screen}>
         <StatusBar barStyle="dark-content" backgroundColor="#F6F7FB" />
         <View style={s.loadHeader}>
-          <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack("Plan")} activeOpacity={0.7}>
+          <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
             <Text style={s.backArrow}>←</Text>
           </TouchableOpacity>
           <View style={s.headerRow}>
             <View style={{ flex: 1 }}>
               <Text style={s.title}>Recommendations</Text>
-              <Text style={s.subtitle}>📍 {cityName || 'Mumbai'}  ·  Finding best places...</Text>
+              <Text style={s.subtitle}>📍 {cityName || 'Nearby'}  ·  Finding best places...</Text>
             </View>
             <ActivityIndicator color={COLORS.primary} size="small" />
           </View>
@@ -499,10 +514,10 @@ const RecommendationScreen = ({ route, navigation }) => {
   }
 
   // ── Main render ───────────────────────────────────────────────────────────
-
   return (
     <View style={s.screen}>
       <StatusBar barStyle="dark-content" backgroundColor="#F6F7FB" />
+
       <FlatList
         data={recs}
         keyExtractor={(item, i) => `${item.place?.place_id ?? i}`}
@@ -513,6 +528,7 @@ const RecommendationScreen = ({ route, navigation }) => {
             isSelected={!!selected.find(p => p.place_id === item.place?.place_id)}
             onToggle={togglePlace}
             onInteraction={logInteraction}
+            onPreview={handlePreview}
           />
         )}
         ListHeaderComponent={<Header />}
@@ -520,13 +536,20 @@ const RecommendationScreen = ({ route, navigation }) => {
         contentContainerStyle={s.list}
         showsVerticalScrollIndicator={false}
       />
+
       <BottomBar />
+
+      {/* ✅ YouTube Preview Modal — fetches from GET /places/{place_id}/videos */}
+      <YouTubeModal
+        visible={ytVisible}
+        place={ytPlace}
+        onClose={() => { setYtVisible(false); setYtPlace(null); }}
+      />
     </View>
   );
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-
 const s = StyleSheet.create({
   screen:     { flex: 1, backgroundColor: '#F6F7FB' },
   list:       { padding: 16, paddingBottom: 140 },

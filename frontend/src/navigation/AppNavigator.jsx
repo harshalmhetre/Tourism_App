@@ -13,7 +13,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import PlanScreen from '../screens/PlanScreen';
 import RecommendationScreen from '../screens/RecommendationScreen';
 import RoutesScreen from '../screens/RoutesScreen';
-
+//import VideoPreviewScreen from '../screens/VideoPreviewScreen';
 
 
 const Stack = createNativeStackNavigator();
@@ -22,7 +22,7 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName="Onboarding"
         screenOptions={{
           headerStyle: {
             backgroundColor: COLORS.primary,
@@ -81,6 +81,11 @@ const AppNavigator = () => {
           component={RoutesScreen} 
           options={{ title: 'Routes' }}
         />
+        {/* <Stack.Screen 
+          name="VideoPreview" 
+          component={VideoPreviewScreen} 
+          options={{ title: 'Video Preview' }}
+        /> */}
       </Stack.Navigator>
     </NavigationContainer>
   );
